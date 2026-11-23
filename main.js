@@ -472,7 +472,9 @@ function endDrag(e) {
 }
 addEventListener('pointerup', endDrag);
 addEventListener('pointercancel', endDrag);
-stage.addEventListener('lostpointercapture', endDrag);
+// タッチでは指を置いた要素が暗黙に capture しており、#stage へ移すとその要素の lostpointercapture が
+// bubble してくる。#stage 自身が capture を失ったときだけ終了する。
+stage.addEventListener('lostpointercapture', e => { if (e.target === stage) endDrag(e); });
 addEventListener('click', e => {
   if (suppressClick) { e.preventDefault(); e.stopPropagation(); suppressClick = false; }
 }, true);
