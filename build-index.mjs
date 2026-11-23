@@ -8,8 +8,9 @@
 //                      pages.js には書き込まれない。
 //
 // 漢字タイトルの読みは mecab があれば使う。無ければコードポイント順で、読みも表示しない。
-// 読みは「漢字を含む語だけひらがなにしたタイトル」(例: Nostrの仕組み → Nostrのしくみ)。
-// 並べ替えに使い、画面でも【よみ】として表示する。誤りは yomi.tsv (タイトル<TAB>よみ) で上書きできる。
+// 読みは「漢字を含む語だけひらがなにしたタイトル」(例: 公開鍵(npub)のマイニング → こうかいかぎ(npub)のマイニング)。
+// 並べ替えに使う。画面の「よみ」行に出すのは語頭が漢字のタイトルだけ (ほかはタイトルのまま表示)。
+// 誤りは yomi.tsv (タイトル<TAB>よみ) で上書きできる。
 
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -65,9 +66,11 @@ function readings(titles) {
   return map;
 }
 
+const stripTags = s => s.replace(/^(?:\s*(?:【[^】]*】|［[^］]*］|\[[^\]]*\]))+/u, '');   // 【完了】 等の接頭タグ
+const headChar = t => (stripTags(t.normalize('NFKC')).match(/[\p{L}\p{N}]/u) || [''])[0];
+
 function sortKey(title, yomi) {
-  let s = (yomi ?? title).normalize('NFKC');
-  s = s.replace(/^(?:\s*(?:【[^】]*】|［[^］]*］|\[[^\]]*\]))+/u, '');   // 【完了】 等の接頭タグは無視
+  let s = stripTags((yomi ?? title).normalize('NFKC'));
   s = kata2hira(s).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '');
   return s || title.toLowerCase();
 }
@@ -92,7 +95,7 @@ const yomi = readings(titles);
 const coll = new Intl.Collator('ja', { numeric: true });
 const entries = titles.map(title => {
   const y = yomi.get(title), key = sortKey(title, y);
-  return { title, yomi: y && HAN.test(title) ? y : '', key, sec: SECTIONS.indexOf(sectionOf(key)) };
+  return { title, yomi: y && HAN.test(headChar(title)) ? y : '', key, sec: SECTIONS.indexOf(sectionOf(key)) };
 });
 entries.sort((a, b) => a.sec - b.sec || coll.compare(a.key, b.key) || coll.compare(a.title, b.title));
 
@@ -105,7 +108,7 @@ const data = {
   project,
   built: new Date().toISOString(),
   titles: entries.map(e => e.title),
-  yomi: entries.map(e => e.yomi),   // 漢字タイトルの表示用読み ('' = 表示しない)
+  yomi: entries.map(e => e.yomi),   // 語頭が漢字のタイトルの読み ('' = タイトルをそのまま表示)
   keys: entries.map(e => e.key),
   sections,
 };
