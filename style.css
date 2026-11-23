@@ -57,8 +57,9 @@ canvas { display: block; }
   contain: strict; will-change: transform;
   color: var(--ink);
 }
-#yomi {
-  flex: none; font-family: var(--serif); font-weight: 400; line-height: 1.4;
+#yomi {   /* 見出し欄の上端に固定 (めくっても位置が動かない)。タイトルは下揃えのまま */
+  position: absolute; left: 0; top: 0; width: 100%;
+  font-family: var(--serif); font-weight: 400; line-height: 1.4;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis; opacity: .85;
 }
 #word {
