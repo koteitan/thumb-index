@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ja" class="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Thumb Index</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<div id="stage">
+  <canvas id="desk"></canvas>
+  <div class="face" id="top-face"><canvas id="top"></canvas></div>
+  <div class="face" id="fore-face"><canvas id="fore"></canvas></div>
+  <div id="page">
+    <canvas id="paper"></canvas>
+    <div id="bodywrap"><canvas id="body"></canvas></div>
+    <div id="tab"><span id="tab-label"></span></div>
+    <div id="head"><span id="pno"></span><span id="word"></span></div>
+    <div id="rule"></div>
+    <a id="link" draggable="false" rel="noopener"></a>
+  </div>
+  <div id="vignette"></div>
+  <canvas id="grain"></canvas>
+</div>
+
+<div id="typed" hidden></div>
+
+<button id="menu-btn" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
+<div id="menu" hidden>
+  <label><input type="checkbox" id="opt-dark"> ダークモード</label>
+  <label><input type="checkbox" id="opt-newtab"> 新しいタブで開く</label>
+  <label><input type="checkbox" id="opt-accel"> ドラッグ加速</label>
+  <label><input type="checkbox" id="opt-invert"> ドラッグ方向を反転</label>
+  <label>感度 <select id="opt-step">
+    <option value="2">2 px / ページ</option>
+    <option value="4">4 px / ページ</option>
+    <option value="6">6 px / ページ</option>
+    <option value="10">10 px / ページ</option>
+  </select></label>
+  <hr>
+  <dl class="help">
+    <dt>ページ上をドラッグ</dt><dd>右・下へ進む / 左・上へ戻る</dd>
+    <dt>小口 (左の紙の束) をドラッグ</dt><dd>索引の位置へ直接ジャンプ</dd>
+    <dt>ホイール / ← →</dt><dd>1 ページずつ</dd>
+    <dt>PageUp / PageDown</dt><dd>前後の見出し (A, B, … あ, か, …)</dd>
+    <dt>英数字をタイプ</dt><dd>前方一致でジャンプ</dd>
+    <dt>クリック / Enter</dt><dd>scrapbox のページを開く</dd>
+  </dl>
+  <p class="meta" id="meta"></p>
+</div>
+
+<script src="pages.js"></script>
+<script src="main.js"></script>
+</body>
+</html>

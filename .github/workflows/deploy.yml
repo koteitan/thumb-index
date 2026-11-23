@@ -1,0 +1,48 @@
+# scrapbox から索引 (pages.js) を作り直して GitHub Pages に上げる
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: ["main"]
+  schedule:
+    - cron: "17 21 * * *"   # 毎日 06:17 JST に索引を更新
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install mecab (漢字タイトルの読み)
+        run: sudo apt-get update && sudo apt-get install -y mecab mecab-ipadic-utf8
+      - name: Rebuild index from scrapbox
+        continue-on-error: true   # scrapbox に届かなければコミット済みの pages.js を使う
+        run: node build-index.mjs
+      - name: Assemble site
+        run: mkdir _site && cp index.html style.css main.js pages.js _site/
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
