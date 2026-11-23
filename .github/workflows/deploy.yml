@@ -36,7 +36,18 @@ jobs:
         continue-on-error: true   # scrapbox に届かなければコミット済みの pages.js を使う
         run: node build-index.mjs
       - name: Assemble site
-        run: mkdir _site && cp index.html style.css main.js pages.js _site/
+        # 各ファイルの URL に内容のハッシュを付け、スマホのキャッシュに古い版が残らないようにする
+        # 版の表示用に <meta name="version"> へコミット ID を書き込む
+        run: |
+          mkdir _site
+          cp index.html style.css main.js pages.js _site/
+          cd _site
+          for f in style.css main.js pages.js; do
+            h=$(sha256sum "$f" | cut -c1-10)
+            sed -i "s|\"$f\"|\"$f?v=$h\"|" index.html
+          done
+          sed -i "s|<meta name=\"version\" content=\"dev\">|<meta name=\"version\" content=\"${GITHUB_SHA::7}\" data-repo=\"$GITHUB_REPOSITORY\">|" index.html
+          grep -E '\?v=|name="version"' index.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact

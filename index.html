@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="version" content="dev">
 <title>Thumb Index</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -15,7 +16,7 @@
     <canvas id="paper"></canvas>
     <div id="bodywrap"><canvas id="body"></canvas></div>
     <div id="tab"><span id="tab-label"></span></div>
-    <div id="head"><span id="pno"></span><span id="word"></span></div>
+    <div id="head"><span id="word"></span></div>
     <div id="rule"></div>
     <a id="link" draggable="false" rel="noopener"></a>
   </div>
@@ -27,6 +28,7 @@
 
 <button id="menu-btn" aria-label="メニュー" aria-expanded="false"><span></span><span></span><span></span></button>
 <div id="menu" hidden>
+  <button id="reload" type="button">⟳ 再読み込み</button>
   <label><input type="checkbox" id="opt-dark"> ダークモード</label>
   <label><input type="checkbox" id="opt-newtab"> 新しいタブで開く</label>
   <label><input type="checkbox" id="opt-accel"> ドラッグ加速</label>

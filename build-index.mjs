@@ -7,8 +7,9 @@
 //   env SCRAPBOX_SID : connect.sid cookie の値。private プロジェクトのときだけ必要。
 //                      pages.js には書き込まれない。
 //
-// 漢字タイトルの読みは mecab (-Oyomi) があれば使う。無ければコードポイント順。
-// 読みの誤りは yomi.tsv (タイトル<TAB>よみ) で上書きできる。
+// 漢字タイトルの読みは mecab があれば使う。無ければコードポイント順で、読みも表示しない。
+// 読みは「漢字を含む語だけひらがなにしたタイトル」(例: Nostrの仕組み → Nostrのしくみ)。
+// 並べ替えに使い、画面でも【よみ】として表示する。誤りは yomi.tsv (タイトル<TAB>よみ) で上書きできる。
 
 import { writeFileSync, readFileSync, existsSync } from 'node:fs';
 import { spawnSync } from 'node:child_process';
@@ -33,15 +34,27 @@ async function fetchTitles() {
 }
 
 const HAN = /\p{Script=Han}/u;
+const kata2hira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 function readings(titles) {
   const map = new Map();
   const need = titles.filter(t => HAN.test(t));
   if (need.length) {
-    const r = spawnSync('mecab', ['-Oyomi'], { input: need.join('\n') + '\n', encoding: 'utf8' });
-    const lines = r.status === 0 ? r.stdout.split('\n') : [];
-    if (lines.length >= need.length) need.forEach((t, i) => map.set(t, lines[i]));
-    else console.warn('mecab が使えないため、漢字タイトルはコードポイント順になります');
+    // 1 行 = 直前の空白 \t 表層形 \t 読み (未知語は読みが空)
+    const r = spawnSync('mecab', ['--node-format=%pS\\t%m\\t%f[7]\\n', '--unk-format=%pS\\t%m\\t\\n', '--eos-format=EOS\\n'],
+      { input: need.join('\n') + '\n', encoding: 'utf8' });
+    const sents = r.status === 0 ? r.stdout.split('EOS\n') : [];
+    if (sents.length > need.length) {
+      need.forEach((t, i) => {
+        let y = '';
+        for (const line of sents[i].split('\n')) {
+          if (!line) continue;
+          const [ws, surf, yomi] = line.split('\t');
+          y += ws + (HAN.test(surf) && yomi && yomi !== '*' ? kata2hira(yomi) : surf);
+        }
+        map.set(t, y);
+      });
+    } else console.warn('mecab が使えないため、漢字タイトルはコードポイント順になります');
   }
   if (existsSync('yomi.tsv')) {
     for (const line of readFileSync('yomi.tsv', 'utf8').split('\n')) {
@@ -51,8 +64,6 @@ function readings(titles) {
   }
   return map;
 }
-
-const kata2hira = s => s.replace(/[ァ-ヶ]/g, c => String.fromCharCode(c.charCodeAt(0) - 0x60));
 
 function sortKey(title, yomi) {
   let s = (yomi ?? title).normalize('NFKC');
@@ -80,8 +91,8 @@ const titles = await fetchTitles();
 const yomi = readings(titles);
 const coll = new Intl.Collator('ja', { numeric: true });
 const entries = titles.map(title => {
-  const key = sortKey(title, yomi.get(title));
-  return { title, key, sec: SECTIONS.indexOf(sectionOf(key)) };
+  const y = yomi.get(title), key = sortKey(title, y);
+  return { title, yomi: y && HAN.test(title) ? y : '', key, sec: SECTIONS.indexOf(sectionOf(key)) };
 });
 entries.sort((a, b) => a.sec - b.sec || coll.compare(a.key, b.key) || coll.compare(a.title, b.title));
 
@@ -94,6 +105,7 @@ const data = {
   project,
   built: new Date().toISOString(),
   titles: entries.map(e => e.title),
+  yomi: entries.map(e => e.yomi),   // 漢字タイトルの表示用読み ('' = 表示しない)
   keys: entries.map(e => e.key),
   sections,
 };

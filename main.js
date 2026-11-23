@@ -19,6 +19,10 @@ const secOf = new Int16Array(N);
 for (let k = 0; k < S; k++) for (let i = secStart[k]; i < secEnd(k); i++) secOf[i] = k;
 const URLS = titles.map(t =>
   `https://scrapbox.io/${encodeURIComponent(D.project)}/${encodeURIComponent(t.replace(/ /g, '_'))}`);
+// 見出しの表示: 漢字タイトルだけ【よみ】を前に付ける
+const DISP = titles.map((t, i) => (D.yomi && D.yomi[i] ? `【${D.yomi[i]}】${t}` : t));
+const TLEN = titles.map(t => [...t].length);
+const NOWRAP_LEN = 10;   // タイトルがこの文字数以下なら改行しない
 
 // ---------------------------------------------------------------- state
 const KEY = 'thumb-index';
@@ -42,7 +46,7 @@ const scheduleSave = () => { clearTimeout(saveT); saveT = setTimeout(save, 500);
 const stage = $('#stage'), deskC = $('#desk'), topC = $('#top'), foreC = $('#fore');
 const topFace = $('#top-face'), foreFace = $('#fore-face');
 const page = $('#page'), paperC = $('#paper'), bodyWrap = $('#bodywrap'), bodyC = $('#body');
-const tab = $('#tab'), tabLabel = $('#tab-label'), head = $('#head'), pno = $('#pno'), word = $('#word');
+const tab = $('#tab'), tabLabel = $('#tab-label'), head = $('#head'), word = $('#word');
 const rule = $('#rule'), link = $('#link'), grainC = $('#grain');
 const menuBtn = $('#menu-btn'), menu = $('#menu'), typedEl = $('#typed');
 
@@ -144,9 +148,7 @@ function computeLayout() {
   g.headTop = clamp(H * 0.02, 6, 26);
   g.headH = clamp(H * 0.24, 70, 280);
   g.headW = g.pageW - g.headL - padR;
-  g.pnoFs = clamp(H * 0.026, 11, 22);
-  g.pnoW = g.pnoFs * (N >= 1000 ? 2.6 : 2.0);
-  g.wordW = g.headW - g.pnoW - g.pnoFs * 0.8;
+  g.wordW = g.headW;
   g.maxFs = g.headH * 0.8;
   g.ruleY = g.headTop + g.headH + 3;
   g.bodyL = g.headL; g.bodyT = g.ruleY + clamp(H * 0.025, 8, 26);
@@ -166,7 +168,6 @@ function applyLayout() {
   setBox(tab, 0, 0, g.tabW, g.rowH);
   tab.style.fontSize = Math.min(g.rowH * 0.62, g.tabW * 0.72) + 'px';
   setBox(head, g.headL, g.headTop, g.headW, g.headH);
-  pno.style.fontSize = g.pnoFs + 'px'; pno.style.width = g.pnoW + 'px'; pno.style.marginRight = g.pnoFs * 0.8 + 'px';
   setBox(rule, g.headL, g.ruleY, g.headW);
   setBox(bodyWrap, g.bodyL, g.bodyT, g.bodyW, g.bodyH);
   // 小口 (左面) と天 (上面) の境目は、ページの角 (P,Q) を通る傾き K の直線
@@ -183,8 +184,8 @@ function measureTitles() {
   FS = new Float32Array(N); TWO = new Uint8Array(N);
   const max1 = G.maxFs, max2 = G.headH * 0.45;
   for (let i = 0; i < N; i++) {
-    const fit1 = G.wordW * 100 / (c.measureText(titles[i]).width || 1) * 0.97;
-    if (fit1 >= Math.min(max1, max2 * 0.92)) FS[i] = Math.min(max1, fit1);
+    const fit1 = G.wordW * 100 / (c.measureText(DISP[i]).width || 1) * 0.97;
+    if (fit1 >= Math.min(max1, max2 * 0.92) || TLEN[i] <= NOWRAP_LEN) FS[i] = Math.min(max1, fit1);
     else { FS[i] = Math.min(max2, fit1 * 2 * 0.82); TWO[i] = 1; }
   }
 }
@@ -411,10 +412,9 @@ function show(i) {
   i = clamp(i | 0, 0, N - 1);
   if (i === cur) return;
   cur = i;
-  word.textContent = titles[i];
+  word.textContent = DISP[i];
   word.style.fontSize = FS[i] + 'px';
   if (TWO[i] !== twoNow) { twoNow = TWO[i]; word.className = twoNow ? 'two' : ''; }
-  pno.textContent = i + 1;
   link.href = URLS[i];
   const k = secOf[i];
   if (k !== curSec) {
@@ -542,10 +542,16 @@ bind('#opt-invert', 'invert');
 const stepSel = $('#opt-step');
 stepSel.value = String(opt.step);
 stepSel.addEventListener('change', () => { opt.step = +stepSel.value; save(); });
-$('#meta').innerHTML = '';
-$('#meta').append(
-  `${N} ページ / ${S} 見出し — 索引 ${new Date(D.built).toLocaleString('ja-JP')} 生成 — `,
-  Object.assign(document.createElement('a'), { href: `https://scrapbox.io/${D.project}/`, textContent: `scrapbox.io/${D.project}`, target: '_blank', rel: 'noopener' }));
+$('#reload').addEventListener('click', () => { save(); location.reload(); });
+// 版: CI が <meta name="version"> にコミット ID を書き込む (手元では dev)
+{
+  const vm = document.querySelector('meta[name="version"]'), ver = vm ? vm.content : 'dev', repo = vm && vm.dataset.repo;
+  const a = (href, text) => Object.assign(document.createElement('a'), { href, textContent: text, target: '_blank', rel: 'noopener' });
+  $('#meta').replaceChildren(
+    '版 ', repo && ver !== 'dev' ? a(`https://github.com/${repo}/commit/${ver}`, ver) : ver,
+    ` — ${N} ページ / ${S} 見出し — 索引 ${new Date(D.built).toLocaleString('ja-JP')} 生成 — `,
+    a(`https://scrapbox.io/${D.project}/`, `scrapbox.io/${D.project}`));
+}
 
 // ---------------------------------------------------------------- boot
 applyTheme();
